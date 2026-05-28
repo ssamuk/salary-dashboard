@@ -1,0 +1,1222 @@
+<!doctype html>
+<html lang="fi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Palkkakuitti Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --card: rgba(255, 255, 255, 0.9);
+        --text: #111827;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --primary: #2563eb;
+        --primary-soft: #dbeafe;
+        --danger: #dc2626;
+        --success: #16a34a;
+        --warning: #d97706;
+        --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, Arial, sans-serif;
+        background:
+          radial-gradient(circle at top left, #dbeafe, transparent 36%),
+          radial-gradient(circle at top right, #fce7f3, transparent 30%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      header {
+        padding: 28px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+      }
+      h1 {
+        font-size: 30px;
+        letter-spacing: -0.04em;
+      }
+      h2 {
+        font-size: 21px;
+        letter-spacing: -0.02em;
+      }
+      h3 {
+        font-size: 16px;
+      }
+      p {
+        color: var(--muted);
+      }
+
+      main {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 0 24px 40px;
+      }
+
+      .app-grid {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 20px;
+        align-items: start;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 16px;
+      }
+
+      .drop-zone {
+        border: 2px dashed #cbd5e1;
+        border-radius: 20px;
+        padding: 24px;
+        text-align: center;
+        cursor: pointer;
+        background: #f8fafc;
+        transition: 0.18s ease;
+      }
+
+      .drop-zone.dragover {
+        border-color: var(--primary);
+        background: var(--primary-soft);
+        transform: translateY(-1px);
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+
+      button,
+      .pill,
+      input[type="search"] {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-size: 14px;
+      }
+
+      button {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      button.secondary {
+        background: white;
+        color: var(--text);
+        border-color: var(--border);
+      }
+
+      button.danger {
+        background: #fee2e2;
+        color: var(--danger);
+        border-color: #fecaca;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-top: 14px;
+      }
+
+      input[type="search"] {
+        width: 100%;
+        outline: none;
+        background: white;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+      }
+
+      .tab {
+        background: white;
+        color: var(--muted);
+        border-color: var(--border);
+      }
+
+      .tab.active {
+        background: var(--text);
+        color: white;
+        border-color: var(--text);
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+
+      .kpi {
+        background: linear-gradient(180deg, #fff, #f8fafc);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 18px;
+      }
+
+      .kpi span {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      .kpi strong {
+        font-size: 25px;
+        letter-spacing: -0.03em;
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 20px;
+      }
+
+      .chart-wrap {
+        height: 320px;
+      }
+
+      .doc-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .doc-item {
+        width: 100%;
+        text-align: left;
+        background: white;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 12px;
+        cursor: pointer;
+      }
+
+      .doc-item.active {
+        border-color: var(--primary);
+        background: var(--primary-soft);
+      }
+
+      .doc-item small {
+        display: block;
+        color: var(--muted);
+        margin-top: 4px;
+        font-weight: 500;
+      }
+
+      .status {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .success {
+        color: var(--success);
+      }
+      .danger-text {
+        color: var(--danger);
+      }
+      .warning-text {
+        color: var(--warning);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 11px 8px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      td.amount {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+      .hidden {
+        display: none !important;
+      }
+
+      .detail-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      canvas.pdf-canvas {
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: white;
+      }
+
+      .reader-toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin: 12px 0;
+        flex-wrap: wrap;
+      }
+
+      .insight-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .insight {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: #fff;
+      }
+
+      .raw-text {
+        max-height: 260px;
+        overflow: auto;
+        white-space: pre-wrap;
+        background: #0f172a;
+        color: #e5e7eb;
+        padding: 14px;
+        border-radius: 18px;
+        font-family: Consolas, monospace;
+        font-size: 12px;
+      }
+
+      @media (max-width: 1100px) {
+        .app-grid,
+        .content-grid,
+        .detail-layout {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          position: static;
+        }
+        .kpi-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        header {
+          padding: 22px 18px;
+        }
+        main {
+          padding: 0 14px 30px;
+        }
+        .kpi-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Palkkakuitti Dashboard</h1>
+        <p>
+          Täysin lokaalisti toimiva PDF-palkkakuittien analyysi. PDF:t
+          tallennetaan selaimen IndexedDB:hen.
+        </p>
+      </div>
+      <div class="toolbar">
+        <button id="backupBtn" class="secondary">Vie backup</button>
+        <button id="restoreBtn" class="secondary">Palauta backup</button>
+        <button id="deleteAllBtn" class="danger">Poista kaikki</button>
+        <input id="restoreInput" type="file" accept="application/json" />
+      </div>
+    </header>
+
+    <main>
+      <div class="app-grid">
+        <aside class="card sidebar">
+          <h2>Import</h2>
+          <div id="dropZone" class="drop-zone">
+            <strong>Valitse PDF:t</strong>
+            <p>tai pudota useampi palkkakuitti tähän</p>
+            <input
+              id="fileInput"
+              type="file"
+              accept="application/pdf"
+              multiple
+            />
+          </div>
+          <div id="importStatus" class="status">Ei ladattuja kuitteja.</div>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Hae kuiteista..."
+          />
+          <div id="docList" class="doc-list"></div>
+        </aside>
+
+        <section>
+          <div class="tabs">
+            <button id="dashboardTab" class="tab active">Dashboard</button>
+            <button id="detailTab" class="tab">Yksittäinen kuitti</button>
+          </div>
+
+          <div id="dashboardView">
+            <div class="kpi-grid">
+              <div class="kpi">
+                <span>Vuoden brutto</span><strong id="kpiGross">0,00 €</strong>
+              </div>
+              <div class="kpi">
+                <span>Vuoden netto</span><strong id="kpiNet">0,00 €</strong>
+              </div>
+              <div class="kpi">
+                <span>Ennakonpidätys</span><strong id="kpiTax">0,00 €</strong>
+              </div>
+              <div class="kpi">
+                <span>Bonukset + lomarahat</span
+                ><strong id="kpiBonus">0,00 €</strong>
+              </div>
+              <div class="kpi">
+                <span>Bonus</span
+                ><strong id="kpiUtilization">0,00 €</strong>
+              </div>
+            </div>
+
+            <div class="content-grid">
+              <div class="card">
+                <h2>Brutto, netto ja verot kuukausittain</h2>
+                <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+              </div>
+              <div class="card">
+                <h2>Insightit</h2>
+                <div id="insights" class="insight-list"></div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px">
+              <h2>Kuukausiyhteenveto</h2>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Kausi</th>
+                      <th>Maksupäivä</th>
+                      <th>Brutto</th>
+                      <th>Netto</th>
+                      <th>Vero</th>
+                      <th>TyEL</th>
+                      <th>Tyött.vak.</th>
+                      <th>Util. %</th>
+                      <th>Util. €</th>
+                      <th>Lisät</th>
+                    </tr>
+                  </thead>
+                  <tbody id="summaryRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="detailView" class="hidden">
+            <div id="emptyDetail" class="card">
+              <h2>Valitse kuitti</h2>
+              <p>
+                Valitse kuitti vasemman reunan listasta nähdäksesi PDF-readerin
+                ja analyysin.
+              </p>
+            </div>
+
+            <div id="detailContent" class="detail-layout hidden">
+              <div class="card">
+                <h2 id="detailTitle">Kuitti</h2>
+                <div class="reader-toolbar">
+                  <button id="prevPage" class="secondary">Edellinen</button>
+                  <span id="pageInfo" class="pill">Sivu 1 / 1</span>
+                  <button id="nextPage" class="secondary">Seuraava</button>
+                  <button id="zoomOut" class="secondary">-</button>
+                  <button id="zoomIn" class="secondary">+</button>
+                </div>
+                <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
+              </div>
+
+              <div class="card">
+                <h2>Poimitut tiedot</h2>
+                <div
+                  class="kpi-grid"
+                  style="
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    margin-top: 14px;
+                  "
+                >
+                  <div class="kpi">
+                    <span>Maksupäivä</span><strong id="dPayDate">-</strong>
+                  </div>
+                  <div class="kpi">
+                    <span>Netto</span><strong id="dNet">-</strong>
+                  </div>
+                  <div class="kpi">
+                    <span>Brutto</span><strong id="dGross">-</strong>
+                  </div>
+                  <div class="kpi">
+                    <span>Vero</span><strong id="dTax">-</strong>
+                  </div>
+                  <div class="kpi">
+                    <span>Utilization %</span
+                    ><strong id="dUtilPercent">-</strong>
+                  </div>
+                  <div class="kpi">
+                    <span>Utilization €</span
+                    ><strong id="dUtilAmount">-</strong>
+                  </div>
+                </div>
+                <h3 style="margin-top: 18px">Erittely</h3>
+                <div class="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Rivi</th>
+                        <th>Luokka</th>
+                        <th>Määrä / %</th>
+                        <th>A-hinta</th>
+                        <th>Summa</th>
+                      </tr>
+                    </thead>
+                    <tbody id="detailRows"></tbody>
+                  </table>
+                </div>
+                <h3 style="margin-top: 18px">Raakateksti</h3>
+                <div id="rawText" class="raw-text"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+      const DB_NAME = "PayslipDashboardDB";
+      const STORE = "payslips";
+      let db,
+        payslips = [],
+        selectedId = null,
+        chart = null,
+        pdfDoc = null,
+        pageNum = 1,
+        scale = 1.2;
+
+      const $ = (id) => document.getElementById(id);
+      const fileInput = $("fileInput"),
+        dropZone = $("dropZone"),
+        docList = $("docList"),
+        importStatus = $("importStatus");
+
+      init();
+
+      async function init() {
+        db = await openDb();
+        payslips = await getAllPayslips();
+        migrateExistingPayslips();
+        bindEvents();
+        renderAll();
+      }
+
+      function bindEvents() {
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => importFiles([...e.target.files]);
+        dropZone.ondragover = (e) => {
+          e.preventDefault();
+          dropZone.classList.add("dragover");
+        };
+        dropZone.ondragleave = () => dropZone.classList.remove("dragover");
+        dropZone.ondrop = (e) => {
+          e.preventDefault();
+          dropZone.classList.remove("dragover");
+          importFiles([...e.dataTransfer.files]);
+        };
+        $("dashboardTab").onclick = () => showView("dashboard");
+        $("detailTab").onclick = () => showView("detail");
+        $("searchInput").oninput = renderDocList;
+        $("deleteAllBtn").onclick = deleteAll;
+        $("backupBtn").onclick = exportBackup;
+        $("restoreBtn").onclick = () => $("restoreInput").click();
+        $("restoreInput").onchange = restoreBackup;
+        $("prevPage").onclick = () => {
+          if (pageNum > 1) {
+            pageNum--;
+            renderPdfPage();
+          }
+        };
+        $("nextPage").onclick = () => {
+          if (pdfDoc && pageNum < pdfDoc.numPages) {
+            pageNum++;
+            renderPdfPage();
+          }
+        };
+        $("zoomIn").onclick = () => {
+          scale += 0.15;
+          renderPdfPage();
+        };
+        $("zoomOut").onclick = () => {
+          scale = Math.max(0.6, scale - 0.15);
+          renderPdfPage();
+        };
+      }
+
+      function openDb() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, 1);
+          req.onupgradeneeded = () =>
+            req.result.createObjectStore(STORE, { keyPath: "id" });
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      function tx(mode = "readonly") {
+        return db.transaction(STORE, mode).objectStore(STORE);
+      }
+
+      function getAllPayslips() {
+        return new Promise((resolve) => {
+          const req = tx().getAll();
+          req.onsuccess = () => resolve(req.result.sort(sortByPeriod));
+        });
+      }
+
+      function savePayslip(item) {
+        return new Promise((resolve) => {
+          const req = tx("readwrite").put(item);
+          req.onsuccess = resolve;
+        });
+      }
+
+      function migrateExistingPayslips() {
+        payslips = payslips
+          .map((item) => {
+            if (!item.text) return item;
+            item.parsed = parsePayslip(item.text, item.fileName);
+            savePayslip(item);
+            return item;
+          })
+          .sort(sortByPeriod);
+      }
+
+      async function importFiles(files) {
+        const pdfs = files.filter((f) => f.type === "application/pdf");
+        if (!pdfs.length)
+          return setStatus("Valitse PDF-tiedostoja.", "danger-text");
+
+        let imported = 0,
+          duplicates = 0,
+          failed = 0;
+        for (const file of pdfs) {
+          try {
+            const buffer = await file.arrayBuffer();
+            const hash = await sha256(buffer);
+            if (payslips.some((p) => p.hash === hash)) {
+              duplicates++;
+              continue;
+            }
+
+            const text = await extractPdfText(buffer);
+            const parsed = parsePayslip(text, file.name);
+            const item = {
+              id: crypto.randomUUID(),
+              hash,
+              fileName: file.name,
+              importedAt: new Date().toISOString(),
+              pdfBase64: arrayBufferToBase64(buffer),
+              text,
+              parsed,
+            };
+            await savePayslip(item);
+            payslips.push(item);
+            imported++;
+          } catch (err) {
+            console.error(err);
+            failed++;
+          }
+        }
+        payslips.sort(sortByPeriod);
+        setStatus(
+          `Tuotu ${imported}, duplikaatteja ${duplicates}, epäonnistui ${failed}.`,
+          imported ? "success" : "warning-text",
+        );
+        renderAll();
+      }
+
+      async function extractPdfText(buffer) {
+        const pdf = await pdfjsLib.getDocument({ data: buffer.slice(0) })
+          .promise;
+        let text = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text +=
+            `\n--- Sivu ${i} ---\n` +
+            content.items.map((x) => x.str).join(" ") +
+            "\n";
+        }
+        return normalize(text);
+      }
+
+      function parsePayslip(text, fileName) {
+        const lines = text
+          .split(/\n/)
+          .map((x) => x.trim())
+          .filter(Boolean);
+        const periodLine = findLine(lines, ["Palkkakausi"]);
+        const periodMatch = periodLine?.match(/(20\d{2})\/(\d{1,2})/);
+        const year = periodMatch ? Number(periodMatch[1]) : null;
+        const month = periodMatch ? Number(periodMatch[2]) : null;
+
+        const payDateLine = findLine(lines, ["Maksupäivä"]);
+        const payDate =
+          payDateLine?.match(/\d{1,2}\.\d{1,2}\.20\d{2}/)?.[0] || null;
+
+        const current = section(
+          text,
+          "KERTYMÄ PALKKAKAUDELTA",
+          "KERTYMÄ VUODEN ALUSTA",
+        );
+        const ytd = section(
+          text,
+          "KERTYMÄ VUODEN ALUSTA",
+          "KERTYMÄ EDELLISELTÄ VUODELTA",
+        );
+        const details = parseDetailRows(
+          section(text, "ERITTELY", "KERTYMÄ PALKKAKAUDELTA"),
+        );
+        const utilization = details.find((r) => r.isUtilizationBonus);
+
+        const data = {
+          fileName,
+          year,
+          month,
+          period:
+            year && month
+              ? `${year}/${String(month).padStart(2, "0")}`
+              : fileName,
+          payDate,
+          net:
+            valueAfter(current, "Maksetaan") || valueAfter(text, "Maksetaan"),
+          gross:
+            valueAfter(current, "Ennakonpid. al. tul") ||
+            valueAfter(current, "Rahapalkka"),
+          cashPay: valueAfter(current, "Rahapalkka"),
+          tax: abs(valueAfter(current, "Ennakonpidätys")),
+          tyel: abs(valueAfter(current, "Työeläkemaksut")),
+          unemployment: abs(valueAfter(current, "Tyött.vak.maksut")),
+          deductions: abs(valueAfter(current, "Vähennykset")),
+          benefits: valueAfter(current, "Luontoisedut"),
+          holiday: valueAfter(current, "Lomarahat"),
+          utilizationBonusPercent: utilization?.quantity ?? null,
+          utilizationBonusAmount: utilization?.amount ?? 0,
+          ytd: {
+            gross: valueAfter(ytd, "Ennakonpid. al. tul"),
+            cashPay: valueAfter(ytd, "Rahapalkka"),
+            tax: abs(valueAfter(ytd, "Ennakonpidätys")),
+            deductions: abs(valueAfter(ytd, "Vähennykset")),
+            tyel: abs(valueAfter(ytd, "Työeläkemaksut")),
+            unemployment: abs(valueAfter(ytd, "Tyött.vak.maksut")),
+            holiday: valueAfter(ytd, "Lomarahat"),
+            bonuses: valueAfter(ytd, "Palkkiot ja lisät"),
+          },
+          details,
+        };
+        data.bonus = details
+          .filter((r) => r.category === "Bonus")
+          .reduce((s, r) => s + Math.max(0, r.amount || 0), 0);
+        data.extra = data.bonus + (data.holiday || 0);
+        return data;
+      }
+
+      function parseDetailRows(text) {
+        const source = normalize(String(text || ""));
+        const codeBoundary = new RegExp("\\s+(?=[0-9]{5}\\s+)", "g");
+        const codeStart = new RegExp("^[0-9]{5}\\s+");
+        const codeOnly = new RegExp("^[0-9]{5}");
+        const codePrefix = new RegExp("^[0-9]{5}\\s*");
+
+        const chunks = source
+          .replace(codeBoundary, String.fromCharCode(10))
+          .split(String.fromCharCode(10))
+          .map((x) => x.trim())
+          .filter((x) => codeStart.test(x));
+
+        return chunks
+          .map((line) => {
+            const codeMatch = line.match(codeOnly);
+            const code = codeMatch ? codeMatch[0] : null;
+            if (!code) return null;
+
+            const numbers = extractNumbers(line);
+            const amount = numbers.length ? numbers[numbers.length - 1] : null;
+            const name = line.replace(codePrefix, "");
+            const lower = name.toLowerCase();
+            const isUtilizationBonus = lower.includes("utilization bonus");
+
+            let quantity = null;
+            let unitPrice = null;
+
+            if (isUtilizationBonus) {
+              quantity = numbers.length >= 2 ? numbers[0] : null;
+            } else if (numbers.length >= 3) {
+              quantity = numbers[0];
+              unitPrice = numbers[1];
+            } else if (numbers.length === 2) {
+              quantity = numbers[0];
+            }
+
+            return {
+              code,
+              name,
+              amount,
+              quantity,
+              unitPrice,
+              category: categorize(line, amount),
+              isUtilizationBonus,
+            };
+          })
+          .filter(Boolean);
+      }
+
+      function categorize(line, amount) {
+        const l = line.toLowerCase();
+        if (l.includes("ennakonpid")) return "Vero";
+        if (l.includes("työeläke") || l.includes("tyel")) return "TyEL";
+        if (l.includes("työttömyys")) return "Tyött.vak.";
+        if (l.includes("lounas") || amount < 0) return "Vähennys";
+        if (l.includes("loma")) return "Lomaraha";
+        if (l.includes("bonus") || l.includes("flex")) return "Bonus";
+        if (l.includes("etu")) return "Luontoisetu";
+        if (l.includes("palkka")) return "Palkka";
+        return "Muu";
+      }
+
+      function renderAll() {
+        renderDocList();
+        renderDashboard();
+      }
+
+      function renderDocList() {
+        const q = $("searchInput").value.toLowerCase();
+        const filtered = payslips.filter(
+          (p) =>
+            JSON.stringify(p.parsed).toLowerCase().includes(q) ||
+            p.text.toLowerCase().includes(q),
+        );
+        docList.innerHTML =
+          filtered
+            .map(
+              (p) => `
+        <button class="doc-item ${p.id === selectedId ? "active" : ""}" data-id="${p.id}">
+          <strong>${escapeHtml(p.parsed.period)}</strong>
+          <small>${escapeHtml(p.fileName)} · Netto ${eur(p.parsed.net)}</small>
+        </button>`,
+            )
+            .join("") || `<p class="status">Ei kuitteja.</p>`;
+        docList
+          .querySelectorAll(".doc-item")
+          .forEach(
+            (btn) => (btn.onclick = () => selectPayslip(btn.dataset.id)),
+          );
+      }
+
+      function renderDashboard() {
+        const rows = payslips.map((p) => p.parsed);
+        const latest = rows.at(-1);
+        const totals = latest?.ytd?.gross
+          ? latest.ytd
+          : {
+              gross: sum(rows, "gross"),
+              tax: sum(rows, "tax"),
+              tyel: sum(rows, "tyel"),
+              unemployment: sum(rows, "unemployment"),
+              holiday: sum(rows, "holiday"),
+              bonuses: sum(rows, "bonus"),
+            };
+        $("kpiGross").textContent = eur(totals.gross);
+        $("kpiNet").textContent = eur(sum(rows, "net"));
+        $("kpiTax").textContent = eur(totals.tax);
+        $("kpiBonus").textContent = eur(
+          (totals.bonuses || sum(rows, "bonus")) + (totals.holiday || 0),
+        );
+        $("kpiUtilization").textContent = eur(
+          sum(rows, "utilizationBonusAmount"),
+        );
+
+        $("summaryRows").innerHTML =
+          rows
+            .map(
+              (
+                r,
+              ) => `<tr onclick="selectByPeriod('${r.period}')" style="cursor:pointer">
+        <td>${r.period}</td><td>${r.payDate || "-"}</td><td class="amount">${eur(r.gross)}</td><td class="amount">${eur(r.net)}</td><td class="amount">${eur(r.tax)}</td><td class="amount">${eur(r.tyel)}</td><td class="amount">${eur(r.unemployment)}</td><td class="amount">${percent(r.utilizationBonusPercent)}</td><td class="amount">${eur(r.utilizationBonusAmount)}</td><td class="amount">${eur(r.extra)}</td>
+      </tr>`,
+            )
+            .join("") || `<tr><td colspan="10">Ei dataa.</td></tr>`;
+
+        renderInsights(rows);
+        renderChart(rows);
+      }
+
+      function renderInsights(rows) {
+        if (!rows.length) {
+          $("insights").innerHTML =
+            `<p class="status">Lataa kuitteja nähdäksesi insightit.</p>`;
+          return;
+        }
+        const best = [...rows].sort((a, b) => (b.net || 0) - (a.net || 0))[0];
+        const avgNet = sum(rows, "net") / rows.length;
+        const taxRate =
+          (sum(rows, "tax") / Math.max(1, sum(rows, "gross"))) * 100;
+        const netRate =
+          (sum(rows, "net") / Math.max(1, sum(rows, "gross"))) * 100;
+        const utilTotal = sum(rows, "utilizationBonusAmount");
+        const utilMonths = rows.filter(
+          (r) => r.utilizationBonusAmount > 0,
+        ).length;
+        const missing = missingMonths(rows);
+        $("insights").innerHTML = [
+          `<div class="insight"><strong>Paras nettokuukausi</strong><p>${best.period}: ${eur(best.net)}</p></div>`,
+          `<div class="insight"><strong>Keskimäärin käteen</strong><p>${eur(avgNet)} / kk</p></div>`,
+          `<div class="insight"><strong>Efektiivinen veroaste</strong><p>${taxRate.toFixed(1).replace(".", ",")} %</p></div>`,
+          `<div class="insight"><strong>Käteenjäämisprosentti</strong><p>${netRate.toFixed(1).replace(".", ",")} % brutosta</p></div>`,
+          `<div class="insight"><strong>Bonus</strong><p>${eur(utilTotal)} yhteensä · ${utilMonths} kk</p></div>`,
+          `<div class="insight"><strong>Puuttuvat kuukaudet</strong><p>${missing.length ? missing.join(", ") : "Ei havaittu puuttuvia kuukausia ladatussa vuodessa."}</p></div>`,
+        ].join("");
+      }
+
+      function renderChart(rows) {
+        const ctx = $("mainChart");
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: rows.map((r) => r.period),
+            datasets: [
+              { label: "Brutto", data: rows.map((r) => r.gross || 0) },
+              { label: "Netto", data: rows.map((r) => r.net || 0) },
+              { label: "Vero", data: rows.map((r) => r.tax || 0) },
+              {
+                label: "Bonus",
+                data: rows.map((r) => r.utilizationBonusAmount || 0),
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+          },
+        });
+      }
+
+      async function selectPayslip(id) {
+        selectedId = id;
+        renderDocList();
+        showView("detail");
+        const item = payslips.find((p) => p.id === id);
+        if (!item) return;
+        $("emptyDetail").classList.add("hidden");
+        $("detailContent").classList.remove("hidden");
+        $("detailTitle").textContent = `Kuitti ${item.parsed.period}`;
+        $("dPayDate").textContent = item.parsed.payDate || "-";
+        $("dNet").textContent = eur(item.parsed.net);
+        $("dGross").textContent = eur(item.parsed.gross);
+        $("dTax").textContent = eur(item.parsed.tax);
+        $("dUtilPercent").textContent = percent(
+          item.parsed.utilizationBonusPercent,
+        );
+        $("dUtilAmount").textContent = eur(item.parsed.utilizationBonusAmount);
+        $("detailRows").innerHTML = item.parsed.details
+          .map(
+            (r) =>
+              `<tr><td>${escapeHtml(r.name)}</td><td>${r.category}</td><td class="amount">${formatQuantity(r)}</td><td class="amount">${r.unitPrice == null ? "-" : eur(r.unitPrice)}</td><td class="amount">${eur(r.amount)}</td></tr>`,
+          )
+          .join("");
+        $("rawText").textContent = item.text;
+        pageNum = 1;
+        scale = 1.2;
+        const buffer = base64ToArrayBuffer(item.pdfBase64);
+        pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+        renderPdfPage();
+      }
+
+      window.selectByPeriod = (period) => {
+        const item = payslips.find((p) => p.parsed.period === period);
+        if (item) selectPayslip(item.id);
+      };
+
+      async function renderPdfPage() {
+        if (!pdfDoc) return;
+        const page = await pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale });
+        const canvas = $("pdfCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        $("pageInfo").textContent = `Sivu ${pageNum} / ${pdfDoc.numPages}`;
+      }
+
+      function showView(view) {
+        $("dashboardView").classList.toggle("hidden", view !== "dashboard");
+        $("detailView").classList.toggle("hidden", view !== "detail");
+        $("dashboardTab").classList.toggle("active", view === "dashboard");
+        $("detailTab").classList.toggle("active", view === "detail");
+      }
+
+      async function deleteAll() {
+        if (!confirm("Poistetaanko kaikki paikallisesti tallennetut kuitit?"))
+          return;
+        await new Promise((resolve) => {
+          const req = tx("readwrite").clear();
+          req.onsuccess = resolve;
+        });
+        payslips = [];
+        selectedId = null;
+        pdfDoc = null;
+        renderAll();
+        setStatus("Kaikki kuitit poistettu.", "success");
+      }
+
+      function exportBackup() {
+        const blob = new Blob(
+          [
+            JSON.stringify(
+              { version: 1, exportedAt: new Date().toISOString(), payslips },
+              null,
+              2,
+            ),
+          ],
+          { type: "application/json" },
+        );
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "palkkakuitti-dashboard-backup.json";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+
+      async function restoreBackup(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const data = JSON.parse(await file.text());
+        for (const item of data.payslips || []) await savePayslip(item);
+        payslips = await getAllPayslips();
+        migrateExistingPayslips();
+        renderAll();
+        setStatus("Backup palautettu.", "success");
+      }
+
+      function findLine(lines, keywords) {
+        return lines.find((l) =>
+          keywords.some((k) => l.toLowerCase().includes(k.toLowerCase())),
+        );
+      }
+      function section(text, start, end) {
+        const s = text.indexOf(start);
+        if (s < 0) return "";
+        const e = end ? text.indexOf(end, s + start.length) : -1;
+        return text.slice(s, e > s ? e : undefined);
+      }
+      function normalize(text) {
+        return text
+          .replace(/\u00a0/g, " ")
+          .replace(/[ \t]+/g, " ")
+          .replace(/\n{3,}/g, "\n\n")
+          .trim();
+      }
+      function extractNumbers(line) {
+        const m = String(line || "").match(
+          /-?\d{1,3}(?:[ .]?\d{3})*(?:,\d{2})|-?\d+,\d{2}/g,
+        );
+        return m ? m.map(parseNumber) : [];
+      }
+      function lastNumber(line) {
+        const nums = extractNumbers(line);
+        return nums.length ? nums.at(-1) : null;
+      }
+
+      const VALUE_LABELS = [
+        "Maksetaan",
+        "Kuukausipalkka",
+        "Matkapuhelinetu",
+        "Autoetu",
+        "Työaika%",
+        "Maksettava kk-palkk",
+        "Svprvmaksu/k",
+        "Svpvrmaksu/v",
+        "Ennakonpid. al. tul",
+        "Ennakonpid.al. tulo",
+        "Luontoisedut",
+        "Rahapalkka",
+        "Ennakonpidätys",
+        "Svpvr-maksu",
+        "Vähennykset",
+        "Lomarahat",
+        "Vuosilomakorvaus",
+        "Verottomat korv.",
+        "Ay-jäsenmaksut",
+        "Työeläkemaksut",
+        "Tyött.vak.maksut",
+        "Palkkiot ja lisät",
+      ];
+
+      function valueAfter(text, label) {
+        const source = String(text || "");
+        const lower = source.toLowerCase();
+        const idx = lower.indexOf(label.toLowerCase());
+        if (idx < 0) return null;
+
+        const start = idx + label.length;
+        const nextLabelIndex = VALUE_LABELS.filter(
+          (other) => other.toLowerCase() !== label.toLowerCase(),
+        )
+          .map((other) => lower.indexOf(other.toLowerCase(), start))
+          .filter((pos) => pos >= 0)
+          .sort((a, b) => a - b)[0];
+
+        const area = source.slice(start, nextLabelIndex || start + 140);
+        const match = area.match(
+          /-?[0-9]{1,3}(?:[ .]?[0-9]{3})*(?:,[0-9]{2})|-?[0-9]+,[0-9]{2}/,
+        );
+        return match ? parseNumber(match[0]) : null;
+      }
+
+      function parseNumber(v) {
+        if (v == null) return null;
+        return Number(
+          String(v).replace(/\s/g, "").replace(/\./g, "").replace(",", "."),
+        );
+      }
+      function abs(v) {
+        return v == null ? null : Math.abs(v);
+      }
+      function sum(rows, key) {
+        return rows.reduce((s, r) => s + (Number(r[key]) || 0), 0);
+      }
+      function eur(v) {
+        return (Number(v) || 0).toLocaleString("fi-FI", {
+          style: "currency",
+          currency: "EUR",
+        });
+      }
+      function percent(v) {
+        return v == null
+          ? "-"
+          : `${Number(v).toLocaleString("fi-FI", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
+      }
+      function formatQuantity(row) {
+        if (row.quantity == null) return "-";
+        return row.isUtilizationBonus
+          ? percent(row.quantity)
+          : Number(row.quantity).toLocaleString("fi-FI");
+      }
+      function sortByPeriod(a, b) {
+        return a.parsed.year - b.parsed.year || a.parsed.month - b.parsed.month;
+      }
+      function missingMonths(rows) {
+        const year = rows[0]?.year;
+        if (!year) return [];
+        const months = new Set(
+          rows.filter((r) => r.year === year).map((r) => r.month),
+        );
+        const max = Math.max(...months);
+        const out = [];
+        for (let i = 1; i <= max; i++)
+          if (!months.has(i)) out.push(`${year}/${String(i).padStart(2, "0")}`);
+        return out;
+      }
+      function escapeHtml(v) {
+        return String(v ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#039;",
+            })[c],
+        );
+      }
+      function setStatus(msg, cls = "") {
+        importStatus.className = `status ${cls}`;
+        importStatus.textContent = msg;
+      }
+
+      async function sha256(buffer) {
+        const hash = await crypto.subtle.digest("SHA-256", buffer.slice(0));
+        return [...new Uint8Array(hash)]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+      function arrayBufferToBase64(buffer) {
+        let binary = "";
+        const bytes = new Uint8Array(buffer);
+        for (let i = 0; i < bytes.length; i++)
+          binary += String.fromCharCode(bytes[i]);
+        return btoa(binary);
+      }
+      function base64ToArrayBuffer(base64) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes.buffer;
+      }
+    </script>
+  </body>
+</html>
